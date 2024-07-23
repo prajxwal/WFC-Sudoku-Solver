@@ -25,7 +25,7 @@ This Sudoku Solver application allows users to input Sudoku puzzles and find sol
    ```bash
    git clone https://github.com/prajxwal/sudoku-solver.git
    cd sudoku-solver
-   .
+   
 
 1. **Install Dependencies from `requirements.txt`:**
 
