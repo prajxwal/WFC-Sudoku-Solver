@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Solver</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            color: #f0f0f0;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #ccc;
+            margin-top: 20px;
+        }
+        .container {
+            background-color: #2e2e2e;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+        td {
+            border: 1px solid #444; /* Dark border for inner cells */
+            padding: 0;
+            text-align: center;
+            width: 40px;
+            height: 40px;
+        }
+        td input {
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            border: none;
+            font-size: 18px;
+            background-color: #333;
+            color: #fff;
+            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+        }
+        .thick-border-horizontal {
+            border-top: 2px solid #fff; /* White border for top of 3x3 squares */
+        }
+        .thick-border-vertical {
+            border-left: 2px solid #fff; /* White border for left of 3x3 squares */
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .example-boards {
+            margin-top: 20px;
+        }
+        .example-boards button {
+            margin: 5px;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .solution-table {
+            margin-top: 20px;
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .solution-table table {
+            border: none;
+        }
+        .solution-table td {
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sudoku Solver</h1>
+        <form id="sudoku-form">
+            <table>
+                {% for i in range(9) %}
+                    <tr>
+                        {% for j in range(9) %}
+                            <td class="
+                                {% if (i % 3 == 0) and i != 0 %} thick-border-horizontal {% endif %}
+                                {% if (j % 3 == 0) and j != 0 %} thick-border-vertical {% endif %}
+                            ">
+                                <input type="number" name="grid" min="1" max="9" value="{{ grid[i][j] if grid and grid[i][j] != 0 else '' }}" />
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+            <button type="button" onclick="submitForm()">Solve</button>
+            <button type="button" onclick="clearBoard()">Clear</button>
+        </form>
+
+        <div class="example-boards">
+            <h3>Use an Example Board</h3>
+            <button onclick="loadBoard('easy')">Easy</button>
+            <button onclick="loadBoard('hard')">Hard</button>
+            <button onclick="loadBoard('expert')">Expert</button>
+        </div>
+
+        {% if solution %}
+            <div class="solution-table">
+                <h2>Solution:</h2>
+                <table>
+                    {% for i in range(9) %}
+                        <tr>
+                            {% for j in range(9) %}
+                                <td class="
+                                    {% if (i % 3 == 0) and i != 0 %} thick-border-horizontal {% endif %}
+                                    {% if (j % 3 == 0) and j != 0 %} thick-border-vertical {% endif %}
+                                ">
+                                    {{ solution[i][j] if solution[i][j] != 0 else '' }}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function submitForm() {
+            const form = document.getElementById('sudoku-form');
+            const data = new FormData(form);
+            const grid = Array.from(data.getAll('grid')).map(val => val ? parseInt(val) : 0);
+
+            fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ grid: grid })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.solution) {
+                    const solution = data.solution;
+                    const inputs = document.querySelectorAll('input[name="grid"]');
+                    inputs.forEach((input, index) => {
+                        input.value = solution[Math.floor(index / 9)][index % 9] || '';
+                    });
+                }
+            });
+        }
+
+        function loadBoard(difficulty) {
+            fetch(`/get_board/${difficulty}`)
+                .then(response => response.json())
+                .then(data => {
+                    const inputs = document.querySelectorAll('input[name="grid"]');
+                    inputs.forEach((input, index) => {
+                        input.value = data[Math.floor(index / 9)][index % 9] || '';
+                    });
+                });
+        }
+
+        function clearBoard() {
+            document.querySelectorAll('input[name="grid"]').forEach(input => {
+                input.value = '';
+            });
+        }
+    </script>
+</body>
+</html>
