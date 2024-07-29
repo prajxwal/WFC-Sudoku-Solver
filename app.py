@@ -3,7 +3,6 @@ import numpy as np
 
 app = Flask(__name__)
 
-# Example boards (same as before)
 easy_board = [
     [5, 3, 0, 0, 7, 0, 0, 0, 0],
     [6, 0, 0, 1, 9, 5, 0, 0, 0],
@@ -46,13 +45,10 @@ def get_possible_values(board, row, col):
 
     possible_values = set(range(1, 10))
     
-    # Remove values from the same row
     possible_values -= set(board[row])
     
-    # Remove values from the same column
     possible_values -= set(board[i][col] for i in range(9))
     
-    # Remove values from the same 3x3 subgrid
     start_row, start_col = 3 * (row // 3), 3 * (col // 3)
     possible_values -= set(board[i][j] for i in range(start_row, start_row + 3)
                                      for j in range(start_col, start_col + 3))
