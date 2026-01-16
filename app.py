@@ -229,9 +229,14 @@ def solve_sudoku(grid: list[list[int]], stats: dict) -> Tuple[Optional[list[list
     # Each entry: (domains_snapshot, cell, remaining_values)
     speculation_stack = []
     max_speculation_depth = 81  # Hard limit
+    max_iterations = 100000  # Safety limit to prevent infinite loops
     
     while True:
         stats['iterations'] += 1
+        
+        # Safety check for infinite loops
+        if stats['iterations'] > max_iterations:
+            return None, False
         
         if is_solved(domains):
             return domains_to_board(domains), True
@@ -240,31 +245,31 @@ def solve_sudoku(grid: list[list[int]], stats: dict) -> Tuple[Optional[list[list
         cell = select_min_entropy_cell(domains)
         
         if cell is None:
-            # No cell to fill but not solved - contradiction
-            if not speculation_stack:
-                return None, False
-            
-            # Backtrack
-            domains, (row, col), remaining = speculation_stack.pop()
-            stats['backtracks'] += 1
-            
-            if not remaining:
-                continue  # No values left, backtrack further
-            
-            # Try next value
-            value = remaining.pop()
-            snapshot = deep_copy_domains(domains)
-            speculation_stack.append((snapshot, (row, col), remaining))
-            
-            domains[row][col] = {value}
-            stats['cells_collapsed'] += 1
-            
-            queue = deque([(row, col)])
-            if not propagate(domains, queue, stats):
-                # Contradiction, will backtrack on next iteration
-                domains, _, _ = speculation_stack.pop()
+            # No cell to fill but not solved - need to backtrack
+            while speculation_stack:
+                domains, (prev_row, prev_col), remaining = speculation_stack.pop()
                 stats['backtracks'] += 1
-            
+                
+                # Try remaining values for this cell
+                while remaining:
+                    value = remaining.pop()
+                    test_domains = deep_copy_domains(domains)
+                    test_domains[prev_row][prev_col] = {value}
+                    
+                    queue = deque([(prev_row, prev_col)])
+                    if propagate(test_domains, queue, stats):
+                        # This value works, push back and continue
+                        speculation_stack.append((domains, (prev_row, prev_col), remaining))
+                        domains = test_domains
+                        stats['cells_collapsed'] += 1
+                        break
+                else:
+                    # All values exhausted, continue backtracking
+                    continue
+                break  # Found a valid value, exit backtrack loop
+            else:
+                # Stack exhausted, no solution
+                return None, False
             continue
         
         row, col = cell
@@ -274,43 +279,34 @@ def solve_sudoku(grid: list[list[int]], stats: dict) -> Tuple[Optional[list[list
         if len(speculation_stack) >= max_speculation_depth:
             return None, False  # Too deep, give up
         
-        # Snapshot current state
-        snapshot = deep_copy_domains(domains)
-        
-        # Try first value
-        value = remaining_values.pop()
-        speculation_stack.append((snapshot, (row, col), remaining_values))
-        
-        domains[row][col] = {value}
-        stats['cells_collapsed'] += 1
-        stats['speculations'] += 1
-        
-        # Propagate
-        queue = deque([(row, col)])
-        if not propagate(domains, queue, stats):
-            # Contradiction - restore and try next
-            domains, _, remaining = speculation_stack.pop()
+        # Try values for this cell
+        while remaining_values:
+            value = remaining_values.pop()
+            test_domains = deep_copy_domains(domains)
+            test_domains[row][col] = {value}
+            stats['cells_collapsed'] += 1
+            stats['speculations'] += 1
+            
+            queue = deque([(row, col)])
+            if propagate(test_domains, queue, stats):
+                # This value works
+                speculation_stack.append((domains, (row, col), remaining_values))
+                domains = test_domains
+                break
+            else:
+                stats['backtracks'] += 1
+        else:
+            # All values failed for this cell - need to backtrack
+            if not speculation_stack:
+                return None, False
+            
+            # Backtrack to previous speculation
+            domains, (prev_row, prev_col), remaining = speculation_stack.pop()
             stats['backtracks'] += 1
             
-            while remaining:
-                value = remaining.pop()
-                snapshot = deep_copy_domains(domains)
-                speculation_stack.append((snapshot, (row, col), remaining))
-                
-                domains[row][col] = {value}
-                stats['cells_collapsed'] += 1
-                
-                queue = deque([(row, col)])
-                if propagate(domains, queue, stats):
-                    break
-                else:
-                    domains, _, remaining = speculation_stack.pop()
-                    stats['backtracks'] += 1
-            else:
-                # All values exhausted for this cell
-                if not speculation_stack:
-                    return None, False
-                # Continue to backtrack to previous cell
+            # Put this cell back to try more values
+            if remaining:
+                speculation_stack.append((domains, (prev_row, prev_col), remaining))
 
 
 
