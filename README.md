@@ -1,71 +1,82 @@
 # WFC-Sudoku Solver
 
-## Overview
-
-This Sudoku Solver application allows users to input Sudoku puzzles and find solutions using a Wave Function Collapse (WFC)-inspired algorithm. The web application features a user-friendly interface where users can enter their own puzzles or choose from predefined easy, hard, and expert puzzles.
+A Sudoku solver using a **Hybrid Wave Function Collapse + Constraint Satisfaction** approach.
 
 ## Features
 
-- **Sudoku Puzzle Input:** Enter Sudoku puzzles into a 9x9 grid.
-- **Solve Button:** Submit the puzzle to solve it using the WFC-inspired algorithm.
-- **Clear Button:** Reset the grid to start a new puzzle.
-- **Example Boards:** Load predefined Sudoku puzzles of varying difficulty levels.
-- **Responsive Design:** User-friendly interface with a dark theme.
+- **Hybrid WFC-CSP Solver** - Domain-based constraint propagation with entropy-driven cell selection
+- **Random Puzzle Generator** - Generate puzzles at Easy, Medium, Hard, and Expert difficulty
+- **Performance Metrics** - Track solve time, iterations, backtracks, and propagations
+- **Input Validation** - Validates puzzle constraints before solving
+- **Minimal UI** - Clean black/white design with light/dark theme toggle
+- **Solve Animation** - Watch cells fill in as the puzzle is solved
 
-## Requirements
+## How It Works
 
-- **Python 3.x**
-- **Flask:** Web framework for Python
-- **NumPy:** Library for numerical operations
+This is NOT simple backtracking. The solver uses:
+
+1. **Domain Representation** - Each cell stores a set of possible values `{1-9}`
+2. **Constraint Propagation** - When a cell collapses to one value, remove it from all peers (queue-based)
+3. **Entropy Selection** - Always pick the cell with fewest possibilities first (fail-fast)
+4. **Bounded Speculation** - Explicit state snapshots for backtracking, no hidden recursion
 
 ## Installation
 
-1. **Clone the Repository:**
-
-   ```bash
-   git clone https://github.com/prajxwal/sudoku-solver.git
-   cd sudoku-solver
-   
-
-1. **Install Dependencies from `requirements.txt`:**
-
-   ```bash
-   pip install -r requirements.txt
-
-
+```bash
+git clone https://github.com/prajxwal/WFC-Sudoku-Solver.git
+cd WFC-Sudoku-Solver
+pip install -r requirements.txt
+```
 
 ## Usage
-1. **Run the Application:**
 
-    ```bash
-   python app.py
-   
- **The application will be available at http://127.0.0.1:5000/ by default.**
- ## Using the Web Interface
+```bash
+python app.py
+```
 
-- **Input Puzzle:** Enter numbers into the Sudoku grid. Empty cells are represented by blank spaces.
-- **Solve Puzzle:** Click the "Solve" button to find the solution. The solution will be displayed in the grid.
-- **Clear Puzzle:** Click the "Clear" button to reset the grid.
-- **Load Example Boards:** Click on the "Easy", "Hard", or "Expert" buttons to load predefined Sudoku puzzles.
+Open http://127.0.0.1:5000 in your browser.
 
-## Wave Function Collapse Algorithm
+### Web Interface
 
-The solver uses a WFC-inspired approach:
+- **Enter Puzzle** - Type numbers into the grid (1-9), leave empty for blanks
+- **Solve** - Click to solve using the WFC-CSP algorithm
+- **Clear** - Reset the grid
+- **Generate** - Create random puzzles at different difficulties
 
-1. **Possible Values Calculation:** For each empty cell, calculate the possible values based on Sudoku constraints (row, column, 3x3 subgrid).
+### API Endpoints
 
-2. **Entropy Minimization:** Select the cell with the fewest possible values to place a number.
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | POST | Solve puzzle (JSON body: `{grid: [81 integers]}`) |
+| `/generate/<difficulty>` | GET | Generate puzzle (easy/medium/hard/expert) |
+| `/validate` | POST | Validate puzzle constraints |
 
-3. **Backtracking:** Place numbers and recursively solve the puzzle, backtracking if necessary.
+## Algorithm Details
+
+```
+1. Initialize domains for all cells
+   - Fixed cells: domain = {value}
+   - Empty cells: domain = {1-9}, pruned by constraints
+
+2. Propagate constraints (queue-based)
+   - When domain.size == 1, remove value from 20 peers
+   - Chain reaction of collapses
+
+3. If not solved, speculate:
+   - Snapshot state
+   - Pick min-entropy cell
+   - Try each value with propagation
+   - Restore on contradiction
+
+4. Repeat until solved or exhausted
+```
+
+## Requirements
+
+- Python 3.8+
+- Flask
+- NumPy
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-   
-   
-   
-
-
-
-
+MIT License - see [LICENSE](LICENSE)

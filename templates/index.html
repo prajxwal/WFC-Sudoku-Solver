@@ -1,193 +1,715 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sudoku Solver</title>
+    <title>WFC Sudoku Solve</title>
+    <meta name="description" content="Solve Sudoku puzzles using the Wave Function Collapse algorithm.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap"
+        rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text: #000000;
+            --text-secondary: #666666;
+            --border: #000000;
+            --border-light: #cccccc;
+            --accent: #000000;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --text: #ffffff;
+            --text-secondary: #999999;
+            --border: #ffffff;
+            --border-light: #333333;
+            --accent: #ffffff;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
+            font-family: 'Roboto Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
+            padding: 40px 20px;
+            transition: background 0.3s, color 0.3s;
         }
-        h1 {
-            color: #f0f0f0;
-            margin-bottom: 20px;
-        }
-        h2 {
-            color: #ccc;
-            margin-top: 20px;
-        }
+
         .container {
-            background-color: #2e2e2e;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-            padding: 20px;
             width: 100%;
-            max-width: 500px;
-            text-align: center;
+            max-width: 450px;
         }
-        table {
-            border-collapse: collapse;
-            margin: 20px auto;
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border);
         }
-        td {
-            border: 1px solid #444; /* Dark border for inner cells */
-            padding: 0;
-            text-align: center;
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .theme-toggle {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--text);
+            color: var(--bg);
+        }
+
+        /* Message */
+        .message {
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 0.8rem;
+            display: none;
+            border: 1px solid;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .message.success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        /* Sudoku Grid */
+        .grid-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            border: 2px solid var(--border);
+        }
+
+        .sudoku-grid input {
             width: 40px;
             height: 40px;
-        }
-        td input {
-            width: 100%;
-            height: 100%;
+            border: 1px solid var(--border-light);
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 500;
             text-align: center;
-            border: none;
-            font-size: 18px;
-            background-color: #333;
-            color: #fff;
-            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+            outline: none;
+            transition: background 0.2s;
+            -moz-appearance: textfield;
         }
-        .thick-border-horizontal {
-            border-top: 2px solid #fff; /* White border for top of 3x3 squares */
+
+        .sudoku-grid input::-webkit-outer-spin-button,
+        .sudoku-grid input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
-        .thick-border-vertical {
-            border-left: 2px solid #fff; /* White border for left of 3x3 squares */
+
+        .sudoku-grid input:focus {
+            background: var(--bg-secondary);
         }
-        button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            margin: 10px;
+
+        .sudoku-grid input.solved {
+            color: var(--success);
+        }
+
+        .sudoku-grid input.original {
+            font-weight: 700;
+        }
+
+        /* 3x3 Box Borders */
+        .sudoku-grid input:nth-child(3n) {
+            border-right: 2px solid var(--border);
+        }
+
+        .sudoku-grid input:nth-child(9n) {
+            border-right: none;
+        }
+
+        .sudoku-grid input:nth-child(n+19):nth-child(-n+27) {
+            border-bottom: 2px solid var(--border);
+        }
+
+        .sudoku-grid input:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--border);
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 12px 20px;
+            border: 2px solid var(--border);
             cursor: pointer;
-            font-size: 16px;
-            border-radius: 5px;
-            transition: background-color 0.3s, box-shadow 0.3s;
+            transition: all 0.2s;
         }
-        button:hover {
-            background-color: #0056b3;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+
+        .btn-primary {
+            background: var(--text);
+            color: var(--bg);
         }
-        .example-boards {
-            margin-top: 20px;
+
+        .btn-primary:hover {
+            background: transparent;
+            color: var(--text);
         }
-        .example-boards button {
-            margin: 5px;
-            font-size: 14px;
-            padding: 8px 16px;
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
         }
-        .solution-table {
-            margin-top: 20px;
-            border: 2px solid #444;
-            border-radius: 8px;
-            overflow: hidden;
+
+        .btn-secondary:hover {
+            background: var(--text);
+            color: var(--bg);
         }
-        .solution-table table {
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Difficulty Section */
+        .difficulty-section {
+            margin-bottom: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .difficulty-section h3 {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 15px;
+        }
+
+        .difficulty-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .difficulty-btn {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid var(--border-light);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .difficulty-btn:hover {
+            border-color: var(--border);
+            background: var(--text);
+            color: var(--bg);
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+            display: none;
+        }
+
+        .stats-panel.show {
+            display: block;
+        }
+
+        .stats-panel h3 {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .stat-card {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* About Section */
+        .about-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .about-toggle {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: none;
             border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 0;
+            margin-bottom: 15px;
         }
-        .solution-table td {
-            border: 1px solid #444;
+
+        .about-toggle:hover {
+            color: var(--text);
+        }
+
+        .about-toggle .arrow {
+            transition: transform 0.2s;
+        }
+
+        .about-toggle.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .about-content {
+            display: none;
+        }
+
+        .about-content.show {
+            display: block;
+        }
+
+        .about-content h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 15px 0 8px 0;
+        }
+
+        .about-content h4:first-child {
+            margin-top: 0;
+        }
+
+        .about-content p {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .about-content ol {
+            font-size: 0.8rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            padding-left: 20px;
+        }
+
+        .about-content code {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            background: var(--bg-secondary);
+            padding: 2px 6px;
+            border: 1px solid var(--border-light);
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-text {
+            font-size: 0.9rem;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 450px) {
+            .sudoku-grid input {
+                width: 34px;
+                height: 34px;
+                font-size: 0.95rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .difficulty-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Sudoku Solver</h1>
-        <form id="sudoku-form">
-            <table>
-                {% for i in range(9) %}
-                    <tr>
-                        {% for j in range(9) %}
-                            <td class="
-                                {% if (i % 3 == 0) and i != 0 %} thick-border-horizontal {% endif %}
-                                {% if (j % 3 == 0) and j != 0 %} thick-border-vertical {% endif %}
-                            ">
-                                <input type="number" name="grid" min="1" max="9" value="{{ grid[i][j] if grid and grid[i][j] != 0 else '' }}" />
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-            </table>
-            <button type="button" onclick="submitForm()">Solve</button>
-            <button type="button" onclick="clearBoard()">Clear</button>
-        </form>
 
-        <div class="example-boards">
-            <h3>Use an Example Board</h3>
-            <button onclick="loadBoard('easy')">Easy</button>
-            <button onclick="loadBoard('hard')">Hard</button>
-            <button onclick="loadBoard('expert')">Expert</button>
+<body>
+    <div class="loading-overlay" id="loading">
+        <span class="loading-text" id="loading-text">Solving...</span>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Sudoku Solver</h1>
+            <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">LIGHT</button>
         </div>
 
-        {% if solution %}
-            <div class="solution-table">
-                <h2>Solution:</h2>
-                <table>
-                    {% for i in range(9) %}
-                        <tr>
-                            {% for j in range(9) %}
-                                <td class="
-                                    {% if (i % 3 == 0) and i != 0 %} thick-border-horizontal {% endif %}
-                                    {% if (j % 3 == 0) and j != 0 %} thick-border-vertical {% endif %}
-                                ">
-                                    {{ solution[i][j] if solution[i][j] != 0 else '' }}
-                                </td>
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </table>
+        <div id="message" class="message"></div>
+
+        <div class="grid-wrapper">
+            <div class="sudoku-grid" id="sudoku-grid">
+                {% for i in range(81) %}
+                <input type="number" min="1" max="9" data-index="{{ i }}"
+                    value="{{ grid[i // 9][i % 9] if grid and grid[i // 9][i % 9] != 0 else '' }}">
+                {% endfor %}
             </div>
-        {% endif %}
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary" id="solveBtn" onclick="solvePuzzle()">Solve</button>
+            <button class="btn btn-secondary" onclick="clearBoard()">Clear</button>
+        </div>
+
+        <div class="difficulty-section">
+            <h3>Generate Puzzle</h3>
+            <div class="difficulty-grid">
+                <button class="difficulty-btn" onclick="generatePuzzle('easy')">Easy</button>
+                <button class="difficulty-btn" onclick="generatePuzzle('medium')">Medium</button>
+                <button class="difficulty-btn" onclick="generatePuzzle('hard')">Hard</button>
+                <button class="difficulty-btn" onclick="generatePuzzle('expert')">Expert</button>
+            </div>
+        </div>
+
+        <div id="stats-panel" class="stats-panel">
+            <h3>Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Time</div>
+                    <div class="stat-value" id="stat-time">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Iterations</div>
+                    <div class="stat-value" id="stat-iterations">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Backtracks</div>
+                    <div class="stat-value" id="stat-backtracks">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Propagations</div>
+                    <div class="stat-value" id="stat-propagations">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-section">
+            <button class="about-toggle" id="aboutToggle" onclick="toggleAbout()">
+                <span class="arrow">></span> How This Works
+            </button>
+            <div class="about-content" id="aboutContent">
+                <h4>Hybrid WFC-CSP Solver</h4>
+                <p>
+                    This solver combines Wave Function Collapse (WFC) concepts with Constraint Satisfaction
+                    Problem (CSP) techniques. It is NOT simple backtracking - it uses domain-based state,
+                    queue-driven propagation, and entropy-guided decisions.
+                </p>
+
+                <h4>Key Concepts</h4>
+                <p>
+                    <strong>Domains</strong> - Each cell stores a set of possible values {1-9}, not just one number.
+                    When a cell has only one possibility left, it "collapses" to that value.<br><br>
+                    <strong>Entropy</strong> - The number of possibilities a cell has. Lower entropy = more constrained.
+                    We always pick the lowest entropy cell first (fail-fast strategy).<br><br>
+                    <strong>Propagation</strong> - When a cell collapses, we remove that value from all its peers
+                    (same row, column, and 3x3 box). This may cause chain reactions of further collapses.
+                </p>
+
+                <h4>Algorithm Steps</h4>
+                <ol>
+                    <li><strong>Initialize Domains</strong> - Fixed cells get domain {value}. Empty cells get {1-9},
+                        then immediately pruned by existing constraints.</li>
+                    <li><strong>Propagate</strong> - Use a queue to process collapsed cells. For each, remove its
+                        value from all 20 peers. New collapses join the queue.</li>
+                    <li><strong>Check State</strong> - If all domains have size 1, solved! If any domain is empty,
+                        contradiction detected.</li>
+                    <li><strong>Speculate</strong> - If stuck, snapshot the entire state. Pick min-entropy cell,
+                        try one value, propagate. If contradiction, restore snapshot and try next value.</li>
+                    <li><strong>Repeat</strong> - Continue until solved or all possibilities exhausted.</li>
+                </ol>
+
+                <h4>Why This Approach?</h4>
+                <p>
+                    <strong>Deterministic First</strong> - Many cells solve themselves through propagation alone,
+                    no guessing needed.<br><br>
+                    <strong>Minimal Speculation</strong> - We only guess when forced, and pick the cell with
+                    fewest options to minimize wrong guesses.<br><br>
+                    <strong>Explicit State</strong> - Snapshots are stored on a stack, not hidden in recursion.
+                    This makes backtracking transparent and bounded.
+                </p>
+
+                <h4>Statistics Explained</h4>
+                <p>
+                    <code>Iterations</code> = Main loop cycles checking puzzle state<br>
+                    <code>Backtracks</code> = Times speculation failed and state was restored<br>
+                    <code>Propagations</code> = Constraint propagation steps (values removed from peer domains)
+                </p>
+            </div>
+        </div>
     </div>
 
     <script>
-        function submitForm() {
-            const form = document.getElementById('sudoku-form');
-            const data = new FormData(form);
-            const grid = Array.from(data.getAll('grid')).map(val => val ? parseInt(val) : 0);
+        function toggleAbout() {
+            const toggle = document.getElementById('aboutToggle');
+            const content = document.getElementById('aboutContent');
+            toggle.classList.toggle('open');
+            content.classList.toggle('show');
+        }
 
-            fetch('/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ grid: grid })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.solution) {
-                    const solution = data.solution;
-                    const inputs = document.querySelectorAll('input[name="grid"]');
-                    inputs.forEach((input, index) => {
-                        input.value = solution[Math.floor(index / 9)][index % 9] || '';
-                    });
+        const inputs = document.querySelectorAll('.sudoku-grid input');
+        let originalCells = new Set();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message show ${type}`;
+            setTimeout(() => msg.classList.remove('show'), 4000);
+        }
+
+        function setLoading(show, text = 'Solving...') {
+            document.getElementById('loading').classList.toggle('show', show);
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('solveBtn').disabled = show;
+        }
+
+        function getGridData() {
+            return Array.from(inputs).map(input => input.value ? parseInt(input.value) : 0);
+        }
+
+        function markOriginalCells() {
+            originalCells.clear();
+            inputs.forEach((input, i) => {
+                if (input.value) {
+                    originalCells.add(i);
+                    input.classList.add('original');
                 }
             });
         }
 
-        function loadBoard(difficulty) {
-            fetch(`/get_board/${difficulty}`)
-                .then(response => response.json())
-                .then(data => {
-                    const inputs = document.querySelectorAll('input[name="grid"]');
-                    inputs.forEach((input, index) => {
-                        input.value = data[Math.floor(index / 9)][index % 9] || '';
-                    });
+        async function solvePuzzle() {
+            const grid = getGridData();
+            markOriginalCells();
+
+            setLoading(true);
+            document.getElementById('stats-panel').classList.remove('show');
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grid })
                 });
+
+                const data = await response.json();
+                setLoading(false);
+
+                if (data.success) {
+                    await animateSolution(data.solution);
+                    updateStats(data.stats);
+                    showMessage('Puzzle solved', 'success');
+                } else {
+                    showMessage(data.error || 'Failed to solve', 'error');
+                }
+            } catch (error) {
+                setLoading(false);
+                showMessage('Error: ' + error.message, 'error');
+            }
         }
 
-        function clearBoard() {
-            document.querySelectorAll('input[name="grid"]').forEach(input => {
-                input.value = '';
-            });
+        async function animateSolution(solution) {
+            const flat = solution.flat();
+            for (let i = 0; i < 81; i++) {
+                if (!originalCells.has(i)) {
+                    inputs[i].value = flat[i] || '';
+                    inputs[i].classList.add('solved');
+                    await new Promise(r => setTimeout(r, 12));
+                }
+            }
         }
+
+        function updateStats(stats) {
+            document.getElementById('stat-time').textContent = stats.solve_time_ms + 'ms';
+            document.getElementById('stat-iterations').textContent = stats.iterations.toLocaleString();
+            document.getElementById('stat-backtracks').textContent = stats.backtracks.toLocaleString();
+            document.getElementById('stat-propagations').textContent = stats.propagations.toLocaleString();
+            document.getElementById('stats-panel').classList.add('show');
+        }
+
+        async function generatePuzzle(difficulty) {
+            setLoading(true, 'Generating...');
+
+            try {
+                const response = await fetch(`/generate/${difficulty}`);
+                const data = await response.json();
+                setLoading(false);
+
+                if (data.success) {
+                    clearBoard(false);
+                    const puzzle = data.puzzle.flat();
+
+                    for (let i = 0; i < 81; i++) {
+                        if (puzzle[i]) {
+                            inputs[i].value = puzzle[i];
+                            inputs[i].classList.add('original');
+                            await new Promise(r => setTimeout(r, 8));
+                        }
+                    }
+                    showMessage(`${difficulty} puzzle (${data.clues} clues)`, 'success');
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (error) {
+                setLoading(false);
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        function clearBoard(showMsg = true) {
+            inputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('solved', 'original');
+            });
+            originalCells.clear();
+            document.getElementById('stats-panel').classList.remove('show');
+            document.getElementById('message').classList.remove('show');
+            if (showMsg) showMessage('Cleared', 'success');
+        }
+
+        // Input validation
+        inputs.forEach(input => {
+            input.addEventListener('input', function () {
+                const val = this.value;
+                if (val && (val < 1 || val > 9 || val.length > 1)) {
+                    this.value = val.slice(-1);
+                    if (this.value < 1 || this.value > 9) this.value = '';
+                }
+            });
+
+            // Arrow navigation
+            input.addEventListener('keydown', function (e) {
+                const idx = parseInt(this.dataset.index);
+                let newIdx = idx;
+
+                switch (e.key) {
+                    case 'ArrowUp': newIdx = idx >= 9 ? idx - 9 : idx; break;
+                    case 'ArrowDown': newIdx = idx < 72 ? idx + 9 : idx; break;
+                    case 'ArrowLeft': newIdx = idx > 0 ? idx - 1 : idx; break;
+                    case 'ArrowRight': newIdx = idx < 80 ? idx + 1 : idx; break;
+                    default: return;
+                }
+
+                if (newIdx !== idx) {
+                    e.preventDefault();
+                    inputs[newIdx].focus();
+                    inputs[newIdx].select();
+                }
+            });
+        });
     </script>
 </body>
+
 </html>
